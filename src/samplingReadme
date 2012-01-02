@@ -1,0 +1,28 @@
+Usage: 
+	Command line:
+		python genSubgraph.py dataFile numOfNodes numNodeHidden type(full or partial)
+	
+	In code:
+		check test.py
+		
+		Returns:
+			[relMatrix, subgraph, sub_e_type, sub_n_type]
+			
+			relMatrix:
+				relational matrix of the sampled subgraph.
+			
+			subgraph: 
+				networkx graph object
+				
+			sub_e_type:
+				dictionary of edge -> edgeType
+				key = str(startNode) + "," + str(endNode);
+				
+				sub_e_type["10,20"] = 0;   # edge (10, 20) has type 0
+				
+			sub_n_type:
+				dictionary of node -> nodeType
+				
+				sub_n_type[10] = 3; #node 10 has type 3
+		
+
