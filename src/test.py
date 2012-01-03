@@ -2,7 +2,8 @@ from gen_sub_graph import *;
 from util import *;
 import networkx as nx;
 from networkx import *;
-#from networkx.readwrite import *;
+from networkx.readwrite import json_graph;
+import json;
 
 def main():
     dataSrc = sys.argv[1];
@@ -17,16 +18,16 @@ def main():
 
     [relMatrix, subgraph] = genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden);
     stats(subgraph);
-    #print subgraph.nodes(True);
+    
     print relMatrix;
 
-    '''trying to write it out.... no success yet
-    f = open('sample.adjdata', 'w');
-    f.write(networkx.readwrite.json_graph.adjacency_data(subgraph));
-    f.close();
-    
-    [nodeTypeCount, edgeTypeCount] = stats(newgraph);
-    relMatrix = gen_full_rel_matrix(subgraph, nodeTypeCount, edgeTypeCount);
+    '''read and write to file
+    write_adj_data(subgraph, 'test.adj');
+
+    [newgraph, newRelMatrix] = read_adj_data('test.adj');
+
+    stats(newgraph);
+    print newRelMatrix;
     '''
     
 

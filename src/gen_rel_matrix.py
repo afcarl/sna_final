@@ -15,7 +15,7 @@ def main():
     k = int(sys.argv[2]);
     sampleType = sys.argv[3];
 
-    [graph, e_type, n_type, nTypes, eTypes] = read_data(dataSrc);
+    [graph, nTypes, eTypes] = read_data(dataSrc);
 
     #stats(graph, e_type, n_type, nTypes, eTypes);
     
@@ -30,14 +30,14 @@ def main():
     '''
     #print fullRelMatrix;
 
-    subgraph = sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType);
+    subgraph = sampling(graph, nTypes, eTypes, k, sampleType);
 
-    subRelMatrix = gen_full_rel_matrix(subgraph, e_type, n_type, len(nTypes), len(eTypes));
+    subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
 
     print subRelMatrix;
 
-def sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType):
-    fullRelMatrix = gen_full_rel_matrix(graph, e_type, n_type, len(nTypes), len(eTypes));
+def sampling(graph, nTypes, eTypes, k, sampleType):
+    fullRelMatrix = gen_full_rel_matrix(graph, len(nTypes), len(eTypes));
 
     sampleRelMatrix = Matrix(len(nTypes)+len(eTypes), len(nTypes) + len(eTypes));
 
@@ -61,7 +61,7 @@ def sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType):
         #print subgraph.edges();
         nextNodeCand = [];
         existingNodes = subgraph.nodes();
-        origRelMatrix = gen_full_rel_matrix(subgraph, e_type, n_type, len(nTypes), len(eTypes));
+        origRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
 
         if (sampleType == 'dms'):            
             maxDiff = -1;
@@ -89,12 +89,14 @@ def sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType):
 
         for nodeCand in nextNodeCand:            
             subgraph.add_node(nodeCand);
+            subgraph.node[nodeCand]['type'] = graph.node[nodeCand]['type'];
 
             outEdges = graph.out_edges(nodeCand);
 
             for start, end in outEdges:
                 if end in existingNodes:
                     subgraph.add_edge(start, end);
+                    subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
 
 
             inEdges = graph.in_edges(nodeCand);
@@ -102,8 +104,9 @@ def sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType):
             for start, end in inEdges:
                 if start in existingNodes:
                     subgraph.add_edge(start, end);
+                    subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
 
-            newRelMatrix = gen_full_rel_matrix(subgraph, e_type, n_type, len(nTypes), len(eTypes));
+            newRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
 
             diff = rmseDiff(origRelMatrix, newRelMatrix);
 
@@ -120,8 +123,6 @@ def sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType):
 
             subgraph.remove_node(nodeCand);
 
-            
-        #now add the node and edges
         if (sampleType == 'dps'):
             #print nextNodeRMSE;
             rmseSum = 0.0;
@@ -142,12 +143,16 @@ def sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType):
                     break;               
         
         #print "Choose %d" % nextNode;
+                
+        
         subgraph.add_node(nextNode);
+        subgraph.node[nextNode]['type'] = graph.node[nextNode]['type'];
         outEdges = graph.out_edges(nextNode);
 
         for start, end in outEdges:
             if end in existingNodes:
                 subgraph.add_edge(start, end);
+                subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
 
 
         inEdges = graph.in_edges(nextNode);
@@ -155,10 +160,11 @@ def sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType):
         for start, end in inEdges:
             if start in existingNodes:
                 subgraph.add_edge(start, end);
+                subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
 
 
         if (subgraph.number_of_nodes() % 10 == 0):            
-            subRelMatrix = gen_full_rel_matrix(subgraph, e_type, n_type, len(nTypes), len(eTypes));
+            subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
 
             diff = rmseDiff(fullRelMatrix, subRelMatrix);
 

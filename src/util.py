@@ -1,6 +1,26 @@
 import networkx as nx;
 from networkx import *;
 from matrix import *;
+from networkx.readwrite import json_graph;
+import json;
+
+def read_adj_data(path):
+    newgraph = nx.DiGraph()
+    d = json.load(open(path))
+
+    newgraph = networkx.readwrite.json_graph.adjacency_graph(d, True);
+    
+    [nodeTypeCount, edgeTypeCount] = stats(newgraph);
+    relMatrix = gen_full_rel_matrix(newgraph, nodeTypeCount, edgeTypeCount);
+
+    return [newgraph, relMatrix];
+
+def write_adj_data(graph, path):
+    f = open(path, 'w');
+    data = networkx.readwrite.json_graph.adjacency_data(graph)
+    s = json.dumps(data);    
+    f.write(s);
+    f.close();
 
 def read_data(path):
     
@@ -115,7 +135,7 @@ def gen_full_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 def gen_node_to_edge_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
     nodeToEdgeMatrix = Matrix(nodeTypeCount, edgeTypeCount);
 
-    for node in graph.nodes_iter():
+    for node in graph.nodes():
         if not ('type' in graph.node[node]):
             #node type not observed, continue;
             continue;
@@ -155,7 +175,7 @@ def gen_node_to_node_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 
     nodeToNodeMatrix = Matrix(nodeTypeCount, nodeTypeCount);
     
-    for node in graph.nodes_iter():
+    for node in graph.nodes():
         if not ('type' in graph.node[node]):
             continue;
 
@@ -193,7 +213,7 @@ def gen_edge_to_edge_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 
     edgeToEdgeMatrix = Matrix(edgeTypeCount, edgeTypeCount);
     
-    for startNode, endNode in graph.edges_iter():
+    for startNode, endNode in graph.edges():
         if not ('type' in graph.edge[startNode][endNode]):
             continue;
         
@@ -234,7 +254,7 @@ def gen_edge_to_node_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 
     edgeToNodeMatrix = Matrix(edgeTypeCount, nodeTypeCount);
     
-    for startNode, endNode in graph.edges_iter():
+    for startNode, endNode in graph.edges():
         if not ('type' in graph.edge[startNode][endNode]) or not ('type' in graph.node[endNode]):
             continue;
 
