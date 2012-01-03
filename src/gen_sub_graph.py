@@ -56,9 +56,12 @@ def genFullSubgraph(dataSrc, numOfNodes, numNodeHidden):
     [graph, e_type, n_type, nTypes, eTypes] = read_data(dataSrc);
     
     [subgraph, sub_e_type, sub_n_type] = randomSampling(graph, e_type, n_type, numOfNodes, numNodeHidden);
-    
+    path = '../data/sample_random_acad';
     stats(subgraph, sub_e_type, sub_n_type);
-    relMatrix = gen_full_rel_matrix(subgraph, sub_e_type, sub_n_type,len(nTypes), len(eTypes));    
+    relMatrix = gen_full_rel_matrix(subgraph, sub_e_type, sub_n_type,len(nTypes), len(eTypes)); 
+    write_edgelist(subgraph, path+'.dat');
+    write_dict(path+'.edgetype', subgraph, e_type, 1);
+    write_dict(path+'.nodetype', subgraph, n_type, 0);   
     print relMatrix;
     return [relMatrix, subgraph, sub_e_type, sub_n_type];
         

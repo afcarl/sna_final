@@ -4,7 +4,7 @@ import sys;
 from matrix import *;
 import random;
 from util import *;
-
+path = '../data/sample_poga_hepth_';
 def main():
 
     if (len(sys.argv) < 4):
@@ -21,17 +21,21 @@ def main():
     
     #fullRelMatrix = gen_full_rel_matrix(graph, e_type, n_type, len(nTypes), len(eTypes));
 
-    '''
+    
     print "Node types: %d" % len(nTypes);
     print "Edge types: %d" % len(eTypes);
     
     print "Node Count: %d" % graph.number_of_nodes();
     print "Edge Count: %d" % graph.number_of_edges();
-    '''
+   
     #print fullRelMatrix;
 
     subgraph = sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType);
-
+    #path = '../data/sample_poga_acad_';
+    #write_edgelist('../data/sample_poga_acad_1.dat', subgraph);    
+    #write_dict('../data/sample_poga_acad_1.edgetype', subgraph, e_type, 1);
+    #write_dict('../data/sample_poga_acad_1.nodetype', subgraph, n_type, 1);
+    
     subRelMatrix = gen_full_rel_matrix(subgraph, e_type, n_type, len(nTypes), len(eTypes));
 
     print subRelMatrix;
@@ -163,6 +167,10 @@ def sampling(graph, e_type, n_type, nTypes, eTypes, k, sampleType):
             diff = rmseDiff(fullRelMatrix, subRelMatrix);
 
             print "Nodes: %d, Edges: %d, RMSE: %.2f" % (subgraph.number_of_nodes(), subgraph.number_of_edges(), diff);
+            if subgraph.number_of_nodes()%40==0:
+                write_edgelist(subgraph, path+str(subgraph.number_of_nodes()/40)+'.dat');    
+                write_dict(path+str(subgraph.number_of_nodes()/40)+'.edgetype', subgraph, e_type, 1);
+                write_dict(path+str(subgraph.number_of_nodes()/40)+'.nodetype', subgraph, n_type, 0);
 
     return subgraph;
 

@@ -51,6 +51,18 @@ def read_data(path):
     f.close();
     return [graph, edgeToType, nodeToType, nTypes, eTypes];
 
+def write_dict(path, graph, aDict, dicType):
+    f = file(path, 'w');
+    for i in graph.nodes():
+        if dicType == 1:
+            for j in graph.neighbors(i):
+                tmp = str(i)+","+str(j);
+                if aDict.keys().count(tmp)==0:
+                    tmp = str(j)+","+str(i);
+                f.write('%i %i %i\n' % (i, j, aDict[tmp]))
+        else:
+            f.write('%i %i\n' % (i, aDict[i]));
+    f.close();
 
 def stats(graph, e_type, n_type):
     edgeTypeCount = {};
