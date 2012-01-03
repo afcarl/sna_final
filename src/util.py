@@ -4,9 +4,7 @@ from matrix import *;
 
 def read_data(path):
     
-    graph = nx.DiGraph();
-    edgeToType = {};
-    nodeToType = {};
+    graph = nx.DiGraph();    
 
     nTypes = [];
     eTypes = [];
@@ -32,43 +30,43 @@ def read_data(path):
             graph.add_node(node2);
             graph.add_edge(node1, node2);
 
-            key = str(node1)+","+str(node2);
-            if not (key in edgeToType):
-                edgeToType[key] = edgeType;
+            graph.edge[node1][node2]['type'] = edgeType;
 
             if not (edgeType in eTypes):
                 eTypes.append(edgeType);
         else:
             node = int(line[0]);
             nodeType = int(line[1]);
-            if not (node in nodeToType):
-                nodeToType[node] = nodeType;
+
+            graph.node[node]['type'] = nodeType;
 
             if not (nodeType in nTypes):
                 nTypes.append(nodeType);
             #print "type";
         
     f.close();
-    return [graph, edgeToType, nodeToType, nTypes, eTypes];
+    return [graph, nTypes, eTypes];
 
 
-def stats(graph, e_type, n_type):
+def stats(graph):
     edgeTypeCount = {};
     nodeTypeCount = {};
 
-    for node in n_type:
-        nodeType = n_type[node];
-        if nodeType in nodeTypeCount:
-            nodeTypeCount[nodeType] +=1;
-        else:
-            nodeTypeCount[nodeType] = 1;
+    for node in graph.nodes():
+        if 'type' in graph.node[node]:
+            nodeType = graph.node[node]['type'];
+            if nodeType in nodeTypeCount:
+                nodeTypeCount[nodeType] +=1;
+            else:
+                nodeTypeCount[nodeType] = 1;
 
-    for edge in e_type:
-        edgeType = e_type[edge];
-        if edgeType in edgeTypeCount:
-            edgeTypeCount[edgeType] +=1;
-        else:
-            edgeTypeCount[edgeType] = 1;
+    for startNode, endNode in graph.edges():
+        if 'type' in graph.edge[startNode][endNode]:
+            edgeType = graph.edge[startNode][endNode]['type'];
+            if edgeType in edgeTypeCount:
+                edgeTypeCount[edgeType] +=1;
+            else:
+                edgeTypeCount[edgeType] = 1;
 
     print "Num of edges: %d" % graph.number_of_edges();
     print "Num of nodes: %d" % graph.number_of_nodes();
@@ -78,11 +76,13 @@ def stats(graph, e_type, n_type):
     print "Node count by type:";
     print nodeTypeCount;
 
-def gen_full_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount):    
-    nodeToNodeMatrix = gen_node_to_node_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount);
-    nodeToEdgeMatrix = gen_node_to_edge_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount);
-    edgeToNodeMatrix = gen_edge_to_node_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount);
-    edgeToEdgeMatrix = gen_edge_to_edge_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount);
+    return [len(nodeTypeCount), len(edgeTypeCount)];
+
+def gen_full_rel_matrix(graph, nodeTypeCount, edgeTypeCount):    
+    nodeToNodeMatrix = gen_node_to_node_rel_matrix(graph, nodeTypeCount, edgeTypeCount);
+    nodeToEdgeMatrix = gen_node_to_edge_rel_matrix(graph, nodeTypeCount, edgeTypeCount);
+    edgeToNodeMatrix = gen_edge_to_node_rel_matrix(graph, nodeTypeCount, edgeTypeCount);
+    edgeToEdgeMatrix = gen_edge_to_edge_rel_matrix(graph, nodeTypeCount, edgeTypeCount);
 
     '''
     print "Node to node";
@@ -112,25 +112,23 @@ def gen_full_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount):
     return fullRelMatrix;
 
 
-def gen_node_to_edge_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount):
+def gen_node_to_edge_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
     nodeToEdgeMatrix = Matrix(nodeTypeCount, edgeTypeCount);
 
     for node in graph.nodes_iter():
-        if not (node in n_type):
+        if not ('type' in graph.node[node]):
             #node type not observed, continue;
             continue;
-        nodeType = n_type[node];
+        nodeType = graph.node[node]['type'];
 
         edges = graph.edges(node);
 
         for startNode, endNode in edges:
-            key = str(startNode) + "," + str(endNode);
-
-            if not (key in e_type):
+            if not ('type' in graph.edge[startNode][endNode]):
                 #edge type not observed, continue;
                 continue;
             
-            edgeType = e_type[key];
+            edgeType = graph.edge[startNode][endNode]['type'];
 
             nodeToEdgeMatrix.set_item(nodeType, edgeType, nodeToEdgeMatrix.get_item(nodeType, edgeType) + 1);
 
@@ -153,23 +151,23 @@ def gen_node_to_edge_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCo
     #print nodeToEdgeMatrix;
     return nodeToEdgeMatrix;
 
-def gen_node_to_node_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount):
+def gen_node_to_node_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 
     nodeToNodeMatrix = Matrix(nodeTypeCount, nodeTypeCount);
     
     for node in graph.nodes_iter():
-        if not (node in n_type):
+        if not ('type' in graph.node[node]):
             continue;
 
-        nodeType = n_type[node];
+        nodeType = graph.node[node]['type'];
                 
         neighbors = graph.successors(node);
 
         for nei in neighbors:
-            if not (nei in n_type):
+            if not ('type' in graph.node[nei]):
                 continue;
             
-            neiType = n_type[nei];
+            neiType = graph.node[nei]['type'];
 
             nodeToNodeMatrix.set_item(nodeType, neiType, nodeToNodeMatrix.get_item(nodeType, neiType) + 1);
 
@@ -191,27 +189,23 @@ def gen_node_to_node_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCo
     return nodeToNodeMatrix;
 
 
-def gen_edge_to_edge_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount):
+def gen_edge_to_edge_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 
     edgeToEdgeMatrix = Matrix(edgeTypeCount, edgeTypeCount);
     
     for startNode, endNode in graph.edges_iter():
-        key = str(startNode) + "," + str(endNode);
-
-        if not (key in e_type):
+        if not ('type' in graph.edge[startNode][endNode]):
             continue;
         
-        edgeType = e_type[key];
+        edgeType = graph.edge[startNode][endNode]['type'];
                                
         neiEdges = graph.edges(endNode);
 
         for neiStart, neiEnd in neiEdges:
-            neiKey = str(neiStart) + "," + str(neiEnd);
-
-            if not (neiKey in e_type):
+            if not ('type' in graph.edge[neiStart][neiEnd]):
                 continue;
 
-            neiEdgeType = e_type[neiKey];
+            neiEdgeType = graph.edge[neiStart][neiEnd]['type'];
 
             edgeToEdgeMatrix.set_item(edgeType, neiEdgeType, edgeToEdgeMatrix.get_item(edgeType, neiEdgeType) + 1);
         
@@ -236,19 +230,17 @@ def gen_edge_to_edge_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCo
     #print edgeToEdgeMatrix;
     return edgeToEdgeMatrix;
 
-def gen_edge_to_node_rel_matrix(graph, e_type, n_type, nodeTypeCount, edgeTypeCount):
+def gen_edge_to_node_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 
     edgeToNodeMatrix = Matrix(edgeTypeCount, nodeTypeCount);
     
     for startNode, endNode in graph.edges_iter():
-        key = str(startNode) + "," + str(endNode);
-
-        if not (key in e_type) or not (endNode in n_type):
+        if not ('type' in graph.edge[startNode][endNode]) or not ('type' in graph.node[endNode]):
             continue;
 
-        edgeType = e_type[key];
+        edgeType = graph.edge[startNode][endNode]['type'];
                                
-        nodeType = n_type[endNode];
+        nodeType = graph.node[endNode]['type'];
 
         edgeToNodeMatrix.set_item(edgeType, nodeType, edgeToNodeMatrix.get_item(edgeType, nodeType) + 1);
         

@@ -6,23 +6,17 @@ Usage:
 		check test.py
 		
 		Returns:
-			[relMatrix, subgraph, sub_e_type, sub_n_type]
+			[relMatrix, subgraph]
 			
 			relMatrix:
+				Matrix object. Check Matrix.py
 				relational matrix of the sampled subgraph.
 			
 			subgraph: 
 				networkx graph object
+				node type can be accessed with: subgraph.node[nodeIndex]['type'];
+				edge type can be accessed with: subgraph.edge[startNode][endNode]['type'];
 				
-			sub_e_type:
-				dictionary of edge -> edgeType
-				key = str(startNode) + "," + str(endNode);
-				
-				sub_e_type["10,20"] = 0;   # edge (10, 20) has type 0
-				
-			sub_n_type:
-				dictionary of node -> nodeType
-				
-				sub_n_type[10] = 3; #node 10 has type 3
+			
 		
 

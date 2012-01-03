@@ -21,9 +21,9 @@ def main():
         genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden);
 
 def genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden):
-    [graph, e_type, n_type, nTypes, eTypes] = read_data(dataSrc);
+    [graph, nTypes, eTypes] = read_data(dataSrc);
     
-    [subgraph, sub_e_type, sub_n_type] = randomSampling(graph, e_type, n_type, numOfNodes, 0);
+    subgraph = randomSampling(graph, numOfNodes, 0);
         
     hiddenCount = 0;
 
@@ -38,35 +38,32 @@ def genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden):
 
         randNode = nodes[randInt];
 
-        del(sub_n_type[randNode]);
+        del(subgraph.node[randNode]['type']);
         nodes.remove(randNode);
 
         #stats(subgraph, sub_e_type, sub_n_type);
 
         hiddenCount+=1;
 
-    relMatrix = gen_full_rel_matrix(subgraph, sub_e_type, sub_n_type,len(nTypes), len(eTypes));    
+    relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));    
 
-    stats(subgraph, sub_e_type, sub_n_type);
-    print relMatrix
+    #stats(subgraph, sub_e_type, sub_n_type);
+    #print relMatrix
     
-    return [relMatrix, subgraph, sub_e_type, sub_n_type];
+    return [relMatrix, subgraph];
 
 def genFullSubgraph(dataSrc, numOfNodes, numNodeHidden):
-    [graph, e_type, n_type, nTypes, eTypes] = read_data(dataSrc);
+    [graph, nTypes, eTypes] = read_data(dataSrc);
     
-    [subgraph, sub_e_type, sub_n_type] = randomSampling(graph, e_type, n_type, numOfNodes, numNodeHidden);
+    subgraph = randomSampling(graph, numOfNodes, numNodeHidden);
     
-    stats(subgraph, sub_e_type, sub_n_type);
-    relMatrix = gen_full_rel_matrix(subgraph, sub_e_type, sub_n_type,len(nTypes), len(eTypes));    
-    print relMatrix;
-    return [relMatrix, subgraph, sub_e_type, sub_n_type];
+    #stats(subgraph, sub_e_type, sub_n_type);
+    relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));    
+    #print relMatrix;
+    return [relMatrix, subgraph];
         
-def randomSampling(graph, e_type, n_type, numOfNodes, numHiddenNodes):   
-
-    sub_e_type = {};
-    sub_n_type = {};
-
+def randomSampling(graph, numOfNodes, numHiddenNodes):   
+   
     subgraph = nx.DiGraph();
 
     randInt = random.randint(0, graph.number_of_nodes()-1);
@@ -74,7 +71,7 @@ def randomSampling(graph, e_type, n_type, numOfNodes, numHiddenNodes):
     randomNode = graph.nodes()[randInt];
 
     subgraph.add_node(randomNode);
-    sub_n_type[randomNode] = n_type[randomNode];
+    subgraph.node[randomNode]['type'] = graph.node[randomNode]['type'];
     nextNodeCand = [];
     isHidden = False;
 
@@ -109,16 +106,15 @@ def randomSampling(graph, e_type, n_type, numOfNodes, numHiddenNodes):
         subgraph.add_node(nextNode);
 
         if not isHidden:
-            sub_n_type[nextNode] = n_type[nextNode];
+            subgraph.node[nextNode]['type'] = graph.node[nextNode]['type'];
 
         #add out and in edges for the new node if another vertex is already in graph
         outEdges = graph.out_edges(nextNode);
 
         for start, end in outEdges:
             if end in existingNodes:
-                subgraph.add_edge(start, end);
-                key = str(start) + "," + str(end);
-                sub_e_type[key] = e_type[key];
+                subgraph.add_edge(start, end);                
+                subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
 
 
         inEdges = graph.in_edges(nextNode);
@@ -126,10 +122,9 @@ def randomSampling(graph, e_type, n_type, numOfNodes, numHiddenNodes):
         for start, end in inEdges:
             if start in existingNodes:
                 subgraph.add_edge(start, end);
-                key = str(start) + "," + str(end);
-                sub_e_type[key] = e_type[key];    
+                subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
     
-    return [subgraph, sub_e_type, sub_n_type];
+    return subgraph;
 
 if __name__ == '__main__':
     sys.exit(main())
