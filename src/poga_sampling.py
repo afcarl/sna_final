@@ -8,16 +8,19 @@ from util import *;
 def main():
 
     if (len(sys.argv) < 4):
-        print "python poga_sampling.py dataFile sampleSize hiddenNodeCount sampleType(dms or dps)";
+        print "python poga_sampling.py dataFile sampleSize hiddenNodeCount sampleType(dms or dps) type(full or partial) outputFile";
         return;
     
     dataSrc = sys.argv[1];
     k = int(sys.argv[2]);
     hiddenCount = int(sys.argv[3]);
     sampleType = sys.argv[4];
+    graphType = sys.argv[5];
+    outputFile = sys.argv[6];
 
     [graph, nTypes, eTypes] = read_data(dataSrc);
 
+    
     #stats(graph, e_type, n_type, nTypes, eTypes);
     
     #fullRelMatrix = gen_full_rel_matrix(graph, e_type, n_type, len(nTypes), len(eTypes));
@@ -31,39 +34,88 @@ def main():
     '''
     #print fullRelMatrix;
 
-    subgraph = sampling(graph, nTypes, eTypes, k, sampleType);
+    if (graphType == 'full'):
+        subgraph = sampling(graph, nTypes, eTypes, k-hiddenCount, sampleType);  
 
-    subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+        subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+        stats(subgraph);
+        print subRelMatrix;
 
-    print subRelMatrix;
+        neighbors = getAllNeighbors(graph, subgraph);
+
+        hiddenNodeCount = 0;
+        
+        while hiddenNodeCount < hiddenCount:
+
+            if len(neighbors) == 0:
+                neighbors = getAllNeighbors(graph, subgraph);
+
+            node = neighbors.pop();
+            addNodeAndRelEdges(graph, subgraph, node);
+            del(subgraph.node[node]['type']);
+            hiddenNodeCount+=1;
+
+        subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+        stats(subgraph);
+        print subRelMatrix;
+    else:
+        subgraph = sampling(graph, nTypes, eTypes, k, sampleType);
+        nodes = subgraph.nodes();
+        relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+        stats(subgraph);
+        print relMatrix;
+
+        numHiddenCount = 0;
+        while numHiddenCount < hiddenCount:
+            randInt = random.randint(0, len(nodes)-1);
+
+            randNode = nodes[randInt];
+
+            del(subgraph.node[randNode]['type']);
+            nodes.remove(randNode);
+
+            #stats(subgraph, sub_e_type, sub_n_type);
+
+            numHiddenCount+=1;
+
+        stats(subgraph);
+        relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));    
+        print relMatrix;
+
+    write_adj_data(subgraph, outputFile);
 
 def sampling(graph, nTypes, eTypes, k, sampleType):
     fullRelMatrix = gen_full_rel_matrix(graph, len(nTypes), len(eTypes));
 
     sampleRelMatrix = Matrix(len(nTypes)+len(eTypes), len(nTypes) + len(eTypes));
 
-    subgraph = nx.DiGraph();
+    subgraph = nx.DiGraph(nodeTypeCount=len(nTypes), edgeTypeCount=len(eTypes));
 
     randInt = random.randint(0, graph.number_of_nodes()-1);
 
     randomNode = graph.nodes()[randInt];
 
     subgraph.add_node(randomNode);
+    subgraph.node[randomNode]['type'] = graph.node[randomNode]['type'];
 
     print "Start node: %d" % randomNode;
     if (sampleType == 'dms'):
         print "Running DMS";        
     elif (sampleType == 'dps'):
         print "Running DPS";
-   
+
+    maxDiff = -1;
+    nextNode = -1;        
     while (subgraph.number_of_nodes() < k):
         #print "-------------------Run %d" % k;
         #print subgraph.nodes();
         #print subgraph.edges();
         nextNodeCand = [];
-        existingNodes = subgraph.nodes();
-        origRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
-
+        if maxDiff == -1:
+            origRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+        else:
+            origRelMatrix = maxRelMatrix;
+            
         if (sampleType == 'dms'):            
             maxDiff = -1;
             nextNode = -1;            
@@ -74,39 +126,10 @@ def sampling(graph, nTypes, eTypes, k, sampleType):
             exit();                   
 
         if len(nextNodeCand) == 0:
-            for node in subgraph.nodes_iter():
-                neighbor = graph.successors(node);
-
-                for nei in neighbor:
-                    if not nei in existingNodes:
-                        nextNodeCand.append(nei);
-
-                neighbor = graph.predecessors(node);
-
-                for nei in neighbor:
-                    if not nei in existingNodes:
-                        nextNodeCand.append(nei);
-
+            nextNodeCand = getAllNeighbors(graph, subgraph);
 
         for nodeCand in nextNodeCand:            
-            subgraph.add_node(nodeCand);
-            subgraph.node[nodeCand]['type'] = graph.node[nodeCand]['type'];
-
-            outEdges = graph.out_edges(nodeCand);
-
-            for start, end in outEdges:
-                if end in existingNodes:
-                    subgraph.add_edge(start, end);
-                    subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
-
-
-            inEdges = graph.in_edges(nodeCand);
-
-            for start, end in inEdges:
-                if start in existingNodes:
-                    subgraph.add_edge(start, end);
-                    subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
-
+            addNodeAndRelEdges(graph, subgraph, nodeCand);
             newRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
 
             diff = rmseDiff(origRelMatrix, newRelMatrix);
@@ -118,9 +141,9 @@ def sampling(graph, nTypes, eTypes, k, sampleType):
                 if (diff > maxDiff):
                     nextNode = nodeCand;
                     maxDiff = diff;
+                    maxRelMatrix = newRelMatrix;
             elif (sampleType == 'dps'):
                 nextNodeRMSE[nodeCand] = diff;
-
 
             subgraph.remove_node(nodeCand);
 
@@ -143,26 +166,8 @@ def sampling(graph, nTypes, eTypes, k, sampleType):
                     nextNode = node;
                     break;               
         
-        #print "Choose %d" % nextNode;
-                
-        
-        subgraph.add_node(nextNode);
-        subgraph.node[nextNode]['type'] = graph.node[nextNode]['type'];
-        outEdges = graph.out_edges(nextNode);
-
-        for start, end in outEdges:
-            if end in existingNodes:
-                subgraph.add_edge(start, end);
-                subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
-
-
-        inEdges = graph.in_edges(nextNode);
-
-        for start, end in inEdges:
-            if start in existingNodes:
-                subgraph.add_edge(start, end);
-                subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
-
+        #print "Choose %d" % nextNode;               
+        addNodeAndRelEdges(graph, subgraph, nextNode);
 
         if (subgraph.number_of_nodes() % 10 == 0):            
             subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));

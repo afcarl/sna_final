@@ -7,31 +7,35 @@ from util import *;
 def main():
 
     if (len(sys.argv) < 5):
-        print "python genSubgraph.py dataFile numOfNodes numNodeHidden type(full or partial)";
+        print "python genSubgraph.py dataFile numOfNodes numNodeHidden type(full or partial) outputFile";
         return;
 
     dataSrc = sys.argv[1];
     numOfNodes = int(sys.argv[2]);
     numNodeHidden = int(sys.argv[3]);
     graphType = sys.argv[4];
+    outputFile = sys.argv[5];
 
     if (graphType == 'full'):
-        genFullSubgraph(dataSrc, numOfNodes, numNodeHidden);
+        [relMatrix, subgraph] = genFullSubgraph(dataSrc, numOfNodes, numNodeHidden);
+        write_adj_data(subgraph, outputFile);
     else:
-        genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden);
+        [relMatrix, subgraph] = genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden);
+        write_adj_data(subgraph, outputFile);
 
 def genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden):
     [graph, nTypes, eTypes] = read_data(dataSrc);
     
-    subgraph = randomSampling(graph, numOfNodes, 0);
+    subgraph = randomSampling(graph, numOfNodes);
         
     hiddenCount = 0;
 
     nodes = subgraph.nodes();
 
-    #relMatrix = gen_full_rel_matrix(subgraph, sub_e_type, sub_n_type,len(nTypes), len(eTypes));
+    stats(subgraph);
+    relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
 
-    #print relMatrix;
+    print relMatrix;
 
     while hiddenCount < numNodeHidden:
         randInt = random.randint(0, len(nodes)-1);
@@ -47,24 +51,45 @@ def genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden):
 
     relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));    
 
-    #stats(subgraph, sub_e_type, sub_n_type);
-    #print relMatrix
+    stats(subgraph);
+    print relMatrix
     
     return [relMatrix, subgraph];
 
 def genFullSubgraph(dataSrc, numOfNodes, numNodeHidden):
     [graph, nTypes, eTypes] = read_data(dataSrc);
     
-    subgraph = randomSampling(graph, numOfNodes, numNodeHidden);
+    subgraph = randomSampling(graph, numOfNodes-numNodeHidden);
     
-    #stats(subgraph, sub_e_type, sub_n_type);
-    relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));    
-    #print relMatrix;
-    return [relMatrix, subgraph];
+    subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+    stats(subgraph);
+    print subRelMatrix;
+
+    neighbors = getAllNeighbors(graph, subgraph);
+
+    hiddenNodeCount = 0;
         
-def randomSampling(graph, numOfNodes, numHiddenNodes):   
+    while hiddenNodeCount < numNodeHidden:
+
+        if len(neighbors) == 0:
+            neighbors = getAllNeighbors(graph, subgraph);
+
+        node = neighbors.pop();
+        addNodeAndRelEdges(graph, subgraph, node);
+        del(subgraph.node[node]['type']);
+        hiddenNodeCount+=1;
+
+    subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+    stats(subgraph);
+    print subRelMatrix;
+        
+    return [subRelMatrix, subgraph];
+        
+def randomSampling(graph, numOfNodes):   
    
     subgraph = nx.DiGraph();
+    subgraph.graph['edgeTypeCount'] = graph.graph['edgeTypeCount'];
+    subgraph.graph['nodeTypeCount'] = graph.graph['nodeTypeCount'];
 
     randInt = random.randint(0, graph.number_of_nodes()-1);
 
@@ -73,56 +98,21 @@ def randomSampling(graph, numOfNodes, numHiddenNodes):
     subgraph.add_node(randomNode);
     subgraph.node[randomNode]['type'] = graph.node[randomNode]['type'];
     nextNodeCand = [];
-    isHidden = False;
 
     while (subgraph.number_of_nodes() < numOfNodes):        
-
-        if (not isHidden) and (subgraph.number_of_nodes() >= (numOfNodes  - numHiddenNodes)):
-            isHidden = True;
-            #print "Hidden!";
-            #stats(subgraph, sub_e_type, sub_n_type);
+      
 
         if len(nextNodeCand) == 0:
-            #print "Find neighbors";
-            for node in subgraph.nodes_iter():
-                existingNodes = subgraph.nodes();
-                neighbor = graph.successors(node);
-
-                for nei in neighbor:
-                    if not nei in existingNodes:
-                        nextNodeCand.append(nei);
-
-                neighbor = graph.predecessors(node);
-
-                for nei in neighbor:
-                    if not nei in existingNodes:
-                        nextNodeCand.append(nei);
+            nextNodeCand = getAllNeighbors(graph, subgraph);
             #print len(nextNodeCand);
 
         #randomly select a node from neighboring nodes and add to subgraph
         randInt = random.randint(0, len(nextNodeCand)-1);
         nextNode = nextNodeCand[randInt];
         nextNodeCand.remove(nextNode);
-        subgraph.add_node(nextNode);
 
-        if not isHidden:
-            subgraph.node[nextNode]['type'] = graph.node[nextNode]['type'];
-
-        #add out and in edges for the new node if another vertex is already in graph
-        outEdges = graph.out_edges(nextNode);
-
-        for start, end in outEdges:
-            if end in existingNodes:
-                subgraph.add_edge(start, end);                
-                subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
-
-
-        inEdges = graph.in_edges(nextNode);
-
-        for start, end in inEdges:
-            if start in existingNodes:
-                subgraph.add_edge(start, end);
-                subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
+        addNodeAndRelEdges(graph, subgraph, nextNode);        
+              
     
     return subgraph;
 

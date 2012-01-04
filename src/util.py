@@ -9,8 +9,13 @@ def read_adj_data(path):
     d = json.load(open(path))
 
     newgraph = networkx.readwrite.json_graph.adjacency_graph(d, True);
-    
-    [nodeTypeCount, edgeTypeCount] = stats(newgraph);
+
+    if not ('nodeTypeCount' in newgraph.graph):
+        [nodeTypeCount, edgeTypeCount] = stats(newgraph);
+    else:
+        nodeTypeCount = newgraph.graph['nodeTypeCount'];
+        edgeTypeCount = newgraph.graph['edgeTypeCount'];
+        
     relMatrix = gen_full_rel_matrix(newgraph, nodeTypeCount, edgeTypeCount);
 
     return [newgraph, relMatrix];
@@ -21,6 +26,25 @@ def write_adj_data(graph, path):
     s = json.dumps(data);    
     f.write(s);
     f.close();
+
+def addNodeAndRelEdges(graph, subgraph, nextNode):
+    subgraph.add_node(nextNode);
+    subgraph.node[nextNode]['type'] = graph.node[nextNode]['type'];
+    outEdges = graph.out_edges(nextNode);
+
+    for start, end in outEdges:
+        if end in subgraph.nodes():
+            subgraph.add_edge(start, end);
+            subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
+
+
+    inEdges = graph.in_edges(nextNode);
+
+    for start, end in inEdges:
+        if start in subgraph.nodes():
+            subgraph.add_edge(start, end);
+            subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
+
 
 def read_data(path):
     
@@ -58,6 +82,9 @@ def read_data(path):
             node = int(line[0]);
             nodeType = int(line[1]);
 
+            if not (node in graph.nodes()):
+                continue;
+
             graph.node[node]['type'] = nodeType;
 
             if not (nodeType in nTypes):
@@ -65,24 +92,33 @@ def read_data(path):
             #print "type";
         
     f.close();
+    graph.graph['edgeTypeCount'] = len(eTypes);
+    graph.graph['nodeTypeCount'] = len(nTypes);
     return [graph, nTypes, eTypes];
 
-def write_dict(path, graph, aDict, dicType):
-    f = file(path, 'w');
-    for i in graph.nodes():
-        if dicType == 1:
-            for j in graph.neighbors(i):
-                tmp = str(i)+","+str(j);
-                if aDict.keys().count(tmp)==0:
-                    tmp = str(j)+","+str(i);
-                f.write('%i %i %i\n' % (i, j, aDict[tmp]))
-        else:
-            f.write('%i %i\n' % (i, aDict[i]));
-    f.close();
+def getAllNeighbors(graph, subgraph):
+    neighbors = [];
+    for node in subgraph.nodes():
+        neighbor = graph.successors(node);
+
+        for nei in neighbor:
+            if not nei in subgraph.nodes():
+                neighbors.append(nei);
+
+        neighbor = graph.predecessors(node);
+
+        for nei in neighbor:
+            if not nei in subgraph.nodes():
+                neighbors.append(nei);
+
+    return neighbors;
 
 def stats(graph):
     edgeTypeCount = {};
     nodeTypeCount = {};
+
+    hiddenNodeCount = 0;
+    hiddenEdgeCount = 0;
 
     for node in graph.nodes():
         if 'type' in graph.node[node]:
@@ -91,6 +127,8 @@ def stats(graph):
                 nodeTypeCount[nodeType] +=1;
             else:
                 nodeTypeCount[nodeType] = 1;
+        else:
+            hiddenNodeCount += 1;
 
     for startNode, endNode in graph.edges():
         if 'type' in graph.edge[startNode][endNode]:
@@ -99,14 +137,20 @@ def stats(graph):
                 edgeTypeCount[edgeType] +=1;
             else:
                 edgeTypeCount[edgeType] = 1;
+        else:
+            hiddenEdgeCount+=1;
 
     print "Num of edges: %d" % graph.number_of_edges();
     print "Num of nodes: %d" % graph.number_of_nodes();
+    print "Hidden node count: %d" % hiddenNodeCount;
+    print "Hidden edge count: %d" % hiddenEdgeCount;
 
     print "Edge count by type:";
     print edgeTypeCount;
     print "Node count by type:";
     print nodeTypeCount;
+    
+    print "";
 
     return [len(nodeTypeCount), len(edgeTypeCount)];
 
