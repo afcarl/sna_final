@@ -24,7 +24,7 @@ def main():
         write_adj_data(subgraph, outputFile);
 
 def genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden):
-    [graph, nTypes, eTypes] = read_data(dataSrc);
+    [graph, fullRelMatrix] = read_adj_data(dataSrc);
     
     subgraph = randomSampling(graph, numOfNodes);
         
@@ -32,8 +32,11 @@ def genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden):
 
     nodes = subgraph.nodes();
 
+    nodeTypeCount = graph.graph['nodeTypeCount'];
+    edgeTypeCount = graph.graph['edgeTypeCount'];
+
     stats(subgraph);
-    relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+    relMatrix = gen_full_rel_matrix(subgraph, nodeTypeCount, edgeTypeCount);
 
     print relMatrix;
 
@@ -49,7 +52,7 @@ def genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden):
 
         hiddenCount+=1;
 
-    relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));    
+    relMatrix = gen_full_rel_matrix(subgraph, nodeTypeCount, edgeTypeCount);    
 
     stats(subgraph);
     print relMatrix
@@ -57,11 +60,14 @@ def genPartialSubgraph(dataSrc, numOfNodes, numNodeHidden):
     return [relMatrix, subgraph];
 
 def genFullSubgraph(dataSrc, numOfNodes, numNodeHidden):
-    [graph, nTypes, eTypes] = read_data(dataSrc);
+    [graph, fullRelMatrix] = read_adj_data(dataSrc);
     
     subgraph = randomSampling(graph, numOfNodes-numNodeHidden);
+
+    nodeTypeCount = graph.graph['nodeTypeCount'];
+    edgeTypeCount = graph.graph['edgeTypeCount'];
     
-    subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+    subRelMatrix = gen_full_rel_matrix(subgraph, nodeTypeCount, edgeTypeCount);
     stats(subgraph);
     print subRelMatrix;
 
@@ -79,7 +85,7 @@ def genFullSubgraph(dataSrc, numOfNodes, numNodeHidden):
         del(subgraph.node[node]['type']);
         hiddenNodeCount+=1;
 
-    subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+    subRelMatrix = gen_full_rel_matrix(subgraph, nodeTypeCount, edgeTypeCount);
     stats(subgraph);
     print subRelMatrix;
         

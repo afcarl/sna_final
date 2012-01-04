@@ -30,18 +30,15 @@ def write_adj_data(graph, path):
 def addNodeAndRelEdges(graph, subgraph, nextNode):
     subgraph.add_node(nextNode);
     subgraph.node[nextNode]['type'] = graph.node[nextNode]['type'];
-    outEdges = graph.out_edges(nextNode);
 
-    for start, end in outEdges:
-        if end in subgraph.nodes():
+    for start, end in graph.out_edges_iter(nextNode):
+        if end in subgraph.nodes_iter():
             subgraph.add_edge(start, end);
             subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
 
 
-    inEdges = graph.in_edges(nextNode);
-
-    for start, end in inEdges:
-        if start in subgraph.nodes():
+    for start, end in graph.in_edges_iter(nextNode):
+        if start in subgraph.nodes_iter():
             subgraph.add_edge(start, end);
             subgraph.edge[start][end]['type'] = graph.edge[start][end]['type'];
 
@@ -98,17 +95,17 @@ def read_data(path):
 
 def getAllNeighbors(graph, subgraph):
     neighbors = [];
-    for node in subgraph.nodes():
-        neighbor = graph.successors(node);
+    for node in subgraph.nodes_iter():
+        neighbor = graph.successors_iter(node);
 
         for nei in neighbor:
-            if not nei in subgraph.nodes():
+            if not nei in subgraph.nodes_iter():
                 neighbors.append(nei);
 
-        neighbor = graph.predecessors(node);
+        neighbor = graph.predecessors_iter(node);
 
         for nei in neighbor:
-            if not nei in subgraph.nodes():
+            if not nei in subgraph.nodes_iter():
                 neighbors.append(nei);
 
     return neighbors;
@@ -120,7 +117,7 @@ def stats(graph):
     hiddenNodeCount = 0;
     hiddenEdgeCount = 0;
 
-    for node in graph.nodes():
+    for node in graph.nodes_iter():
         if 'type' in graph.node[node]:
             nodeType = graph.node[node]['type'];
             if nodeType in nodeTypeCount:
@@ -130,7 +127,7 @@ def stats(graph):
         else:
             hiddenNodeCount += 1;
 
-    for startNode, endNode in graph.edges():
+    for startNode, endNode in graph.edges_iter():
         if 'type' in graph.edge[startNode][endNode]:
             edgeType = graph.edge[startNode][endNode]['type'];
             if edgeType in edgeTypeCount:
@@ -191,15 +188,13 @@ def gen_full_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 def gen_node_to_edge_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
     nodeToEdgeMatrix = Matrix(nodeTypeCount, edgeTypeCount);
 
-    for node in graph.nodes():
+    for node in graph.nodes_iter():
         if not ('type' in graph.node[node]):
             #node type not observed, continue;
             continue;
         nodeType = graph.node[node]['type'];
 
-        edges = graph.edges(node);
-
-        for startNode, endNode in edges:
+        for startNode, endNode in graph.edges_iter(node):
             if not ('type' in graph.edge[startNode][endNode]):
                 #edge type not observed, continue;
                 continue;
@@ -231,15 +226,13 @@ def gen_node_to_node_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 
     nodeToNodeMatrix = Matrix(nodeTypeCount, nodeTypeCount);
     
-    for node in graph.nodes():
+    for node in graph.nodes_iter():
         if not ('type' in graph.node[node]):
             continue;
 
         nodeType = graph.node[node]['type'];
                 
-        neighbors = graph.successors(node);
-
-        for nei in neighbors:
+        for nei in graph.successors_iter(node):
             if not ('type' in graph.node[nei]):
                 continue;
             
@@ -269,15 +262,13 @@ def gen_edge_to_edge_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 
     edgeToEdgeMatrix = Matrix(edgeTypeCount, edgeTypeCount);
     
-    for startNode, endNode in graph.edges():
+    for startNode, endNode in graph.edges_iter():
         if not ('type' in graph.edge[startNode][endNode]):
             continue;
         
         edgeType = graph.edge[startNode][endNode]['type'];
                                
-        neiEdges = graph.edges(endNode);
-
-        for neiStart, neiEnd in neiEdges:
+        for neiStart, neiEnd in graph.edges_iter(endNode):
             if not ('type' in graph.edge[neiStart][neiEnd]):
                 continue;
 
@@ -310,7 +301,7 @@ def gen_edge_to_node_rel_matrix(graph, nodeTypeCount, edgeTypeCount):
 
     edgeToNodeMatrix = Matrix(edgeTypeCount, nodeTypeCount);
     
-    for startNode, endNode in graph.edges():
+    for startNode, endNode in graph.edges_iter():
         if not ('type' in graph.edge[startNode][endNode]) or not ('type' in graph.node[endNode]):
             continue;
 

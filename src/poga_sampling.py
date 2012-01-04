@@ -18,7 +18,8 @@ def main():
     graphType = sys.argv[5];
     outputFile = sys.argv[6];
 
-    [graph, nTypes, eTypes] = read_data(dataSrc);
+    #[graph, nTypes, eTypes] = read_data(dataSrc);
+    [graph, fullRelMatrix] = read_adj_data(dataSrc);
 
     
     #stats(graph, e_type, n_type, nTypes, eTypes);
@@ -35,9 +36,9 @@ def main():
     #print fullRelMatrix;
 
     if (graphType == 'full'):
-        subgraph = sampling(graph, nTypes, eTypes, k-hiddenCount, sampleType);  
+        subgraph = sampling(graph, k-hiddenCount, sampleType);  
 
-        subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+        subRelMatrix = gen_full_rel_matrix(subgraph, graph.graph['nodeTypeCount'], graph.graph['edgeTypeCount']);
         stats(subgraph);
         print subRelMatrix;
 
@@ -55,13 +56,13 @@ def main():
             del(subgraph.node[node]['type']);
             hiddenNodeCount+=1;
 
-        subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+        subRelMatrix = gen_full_rel_matrix(subgraph, graph.graph['nodeTypeCount'], graph.graph['edgeTypeCount']);
         stats(subgraph);
         print subRelMatrix;
     else:
-        subgraph = sampling(graph, nTypes, eTypes, k, sampleType);
+        subgraph = sampling(graph, k, sampleType);
         nodes = subgraph.nodes();
-        relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+        relMatrix = gen_full_rel_matrix(subgraph, graph.graph['nodeTypeCount'], graph.graph['edgeTypeCount']);
         stats(subgraph);
         print relMatrix;
 
@@ -79,17 +80,24 @@ def main():
             numHiddenCount+=1;
 
         stats(subgraph);
-        relMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));    
+        relMatrix = gen_full_rel_matrix(subgraph, graph.graph['nodeTypeCount'], graph.graph['edgeTypeCount']);    
         print relMatrix;
 
     write_adj_data(subgraph, outputFile);
 
-def sampling(graph, nTypes, eTypes, k, sampleType):
-    fullRelMatrix = gen_full_rel_matrix(graph, len(nTypes), len(eTypes));
+def sampling(graph, k, sampleType):
 
-    sampleRelMatrix = Matrix(len(nTypes)+len(eTypes), len(nTypes) + len(eTypes));
+    nodeTypeCount = graph.graph['nodeTypeCount'];
+    edgeTypeCount = graph.graph['edgeTypeCount'];
 
-    subgraph = nx.DiGraph(nodeTypeCount=len(nTypes), edgeTypeCount=len(eTypes));
+    
+    fullRelMatrix = gen_full_rel_matrix(graph, nodeTypeCount, edgeTypeCount);
+
+    sampleRelMatrix = Matrix(nodeTypeCount + edgeTypeCount, nodeTypeCount + edgeTypeCount);
+
+    subgraph = nx.DiGraph();
+    subgraph.graph['nodeTypeCount'] = nodeTypeCount;
+    subgraph.graph['edgeTypeCount'] = edgeTypeCount;
 
     randInt = random.randint(0, graph.number_of_nodes()-1);
 
@@ -112,7 +120,7 @@ def sampling(graph, nTypes, eTypes, k, sampleType):
         #print subgraph.edges();
         nextNodeCand = [];
         if maxDiff == -1:
-            origRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+            origRelMatrix = gen_full_rel_matrix(subgraph, nodeTypeCount, edgeTypeCount);
         else:
             origRelMatrix = maxRelMatrix;
             
@@ -130,7 +138,7 @@ def sampling(graph, nTypes, eTypes, k, sampleType):
 
         for nodeCand in nextNodeCand:            
             addNodeAndRelEdges(graph, subgraph, nodeCand);
-            newRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+            newRelMatrix = gen_full_rel_matrix(subgraph, nodeTypeCount, edgeTypeCount);
 
             diff = rmseDiff(origRelMatrix, newRelMatrix);
 
@@ -170,7 +178,7 @@ def sampling(graph, nTypes, eTypes, k, sampleType):
         addNodeAndRelEdges(graph, subgraph, nextNode);
 
         if (subgraph.number_of_nodes() % 10 == 0):            
-            subRelMatrix = gen_full_rel_matrix(subgraph, len(nTypes), len(eTypes));
+            subRelMatrix = gen_full_rel_matrix(subgraph, nodeTypeCount, edgeTypeCount);
 
             diff = rmseDiff(fullRelMatrix, subRelMatrix);
 
